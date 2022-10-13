@@ -73,7 +73,11 @@ function d(x) = unit * (
 
 
 x = [for(x = [xmin:step:xmax + step / 2]) x];
-integral = integrate([for(x = x) d(x) * step], c ? f(xmin) : 0);
+integral = integrate([for(x = x) d(x) * step], (c ? f(xmin) : 0) - step * d(0));
+f = [for(x = x) [unit * x, f(x)]];
+d = [for(x = x) [unit * x, d(x)]];
+_f = [for(i = [0 : len(integral) - 1]) [unit * x[i], integral[i]]];
+_d = [for(x = x) [unit * x, (f(x + step / 2) - f(x - step / 2)) / step]];
 	
 $fs = .2;
 $fa = 2;
@@ -115,8 +119,8 @@ module 3d(thick = thick) translate([0, 0, unit * xmax]) rotate([0, 90 ,0]) {
 		if(ceil(xmin + step) < (xmax - step)) for(x = [ceil(xmin):xmax - step]) translate([x * unit, 0, 0]) cube([1, 1000, 1000], center = true);
 	}
 		
-	#%translate([0, 0, xmark / 2]) linear_extrude(thick, center = true) f_poly();
-	#%rotate([90, 0, 0]) translate([0, 0, -xmark / 2]) linear_extrude(thick, center = true) d_poly();
+	#%translate([0, 0, xmark / 2]) linear_extrude(thick, center = true) f_poly(_f);
+	#%rotate([90, 0, 0]) translate([0, 0, -xmark / 2]) linear_extrude(thick, center = true) d_poly(_d);
 		
 	if(ceil(xmin + step) < (xmax - step)) 
 	intersection() {
@@ -129,8 +133,8 @@ module 3d(thick = thick) translate([0, 0, unit * xmax]) rotate([0, 90 ,0]) {
 	}
 }
 
-module f_poly() offset((xmax - xmin) / 100) offset(-(xmax - xmin) / 101) polygon(concat([for(x = x) [x * unit, f(x)]], [[max(x) * unit, 0], [min(x) * unit, 0]]));
-module d_poly() offset((xmax - xmin) / 100) offset(-(xmax - xmin) / 101) polygon(concat([for(x = x) [x * unit, d(x)]], [[max(x) * unit, 0], [min(x) * unit, 0]]));
+module f_poly(f = f) offset((xmax - xmin) / 100) offset(-(xmax - xmin) / 101) polygon(concat(f, [[max(x) * unit, 0], [min(x) * unit, 0]]));
+module d_poly(d = d) offset((xmax - xmin) / 100) offset(-(xmax - xmin) / 101) polygon(concat(d, [[max(x) * unit, 0], [min(x) * unit, 0]]));
 
 module vase() translate([0, 0, unit * xmax]) rotate([0, 90, -90]) {
 	for(i = [0, 1]) translate([0, 0, i * (vasewidth + thick)]) linear_extrude(thick, center = true) {
