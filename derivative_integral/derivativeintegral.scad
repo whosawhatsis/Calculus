@@ -31,6 +31,13 @@ c = true; // use +c to make the calculated integral match (does not affect STL)
 
 func = "custom"; // ["custom", "x^2 / 2", "sin(x)", "e^(x / 2)", "e^x", "x^2 / 2 - 4.5", "x^3 / 12 - x", "x^2 / 4 - 1", "-cos(x) * sin(y) + 1.5, x = 0", "-cos(x) * sin(y) + 1.5, x = 4", "-cos(x) * sin(y) + 1.5, y = 5", "x^3 / 6 - x - .5", "9.6/16 * x^2 (lego)", "-e^(-2 * x) / 2 + .5", "sin(x) / 2 + x"]
 
+/* [2D-only] */
+
+outline = true;
+foldline = true;
+drawline = true;
+boundingbox = true;
+
 {} // end customizer
 
 unit = xunit ? xunit : 100 / abs(xmax - xmin);
@@ -78,7 +85,7 @@ f = [for(x = x) [unit * x, f(x)]];
 d = [for(x = x) [unit * x, d(x)]];
 _f = [for(i = [0 : len(integral) - 1]) [unit * x[i], integral[i]]];
 _d = [for(x = x) [unit * x, (f(x + step / 2) - f(x - step / 2)) / step]];
-	
+
 $fs = .2;
 $fa = 2;
 
@@ -92,23 +99,49 @@ if(thick) {
 	}
 }
 else {
-	2d();
+	2d(outline, foldline, drawline, boundingbox);
 	%3d(1);
 }
 
-module 2d() difference() {
-	union() {
-		intersection() {
-			union() for(m = [0, 1]) mirror([0, m, 0]) f_poly();
-			translate([-1000, 0, 0]) square(2000);
+module 2d(outline = true, foldline = true, drawline = true, boundingbox = false) difference() {
+	if(boundingbox) translate([-1, -max([for(i = d) i[1]]) - 1, 0]) square([(xmax - xmin) * unit + 2, max([for(i = f) i[1]]) + max([for(i = d) i[1]]) + 2]);
+	if(outline) difference() {
+		union() {
+			intersection() {
+				union() for(m = [0, 1]) mirror([0, m, 0]) f_poly();
+				translate([-1000, 0, 0]) square(2000);
+			}
+			intersection() {
+				union() for(m = [0, 1]) mirror([0, m, 0]) d_poly();
+				translate([-1000, -2000, 0]) square(2000);
+			}
 		}
-		intersection() {
-			union() for(m = [0, 1]) mirror([0, m, 0]) d_poly();
-			translate([-1000, -2000, 0]) square(2000);
+		if(drawline) 2d(false, false, true, false);
+		if(foldline) 2d(false, true, false, false);
+	} else intersection() {
+		2d(true, false, false, false);
+		union() {
+			if(drawline) {
+				for(x = [ceil(xmin + step):xmax - step]) translate([x * unit, 0, 0]) square([.0001, 1000], center = true);
+				intersection() {
+					square([5000, .5], center = true);
+					offset(-.001) {
+						intersection() {
+								f_poly();
+								d_poly();
+						}
+						intersection() {
+							mirror([0, 1, 0]) f_poly();
+							mirror([0, 1, 0]) d_poly();
+						}
+					}
+				}
+			}
+			if(foldline) square([5000, .0001], center = true);
 		}
 	}
-	for(x = [ceil(xmin + step):xmax - step]) translate([x * unit, 0, 0]) square([.0001, 1000], center = true);
 }
+
 module 3d(thick = thick) translate([0, 0, unit * xmax]) rotate([0, 90 ,0]) {
 	difference() {
 		union() {
